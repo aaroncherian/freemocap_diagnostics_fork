@@ -71,14 +71,14 @@ jobs:
       #     name: diagnostic_report_${{ matrix.os }}
       #     path: freemocap/diagnostics/version_diagnostics/diagnostic_report.html
 
-      # # Upload individual per-OS test data
-      # - name: Upload OS-specific calibration + 3D data
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: test_data_${{ matrix.os }}
-      #     path: |
-      #       ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
-      #       ${{ env.RECORDING_PATH }}/output_data/mediapipe_skeleton_3d.npy
+      # Upload individual per-OS test data
+      - name: Upload OS-specific calibration
+        uses: actions/upload-artifact@v4
+        with:
+          name: test_data_${{ matrix.os }}
+          path: |
+            ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
+
 
   # aggregate-artifacts:
   #   runs-on: ubuntu-latest
