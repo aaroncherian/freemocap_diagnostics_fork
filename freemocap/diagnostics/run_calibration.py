@@ -17,8 +17,13 @@ from pathlib import Path
 from freemocap.data_layer.recording_models.recording_info_model import RecordingInfoModel
 from freemocap.utilities.download_sample_data import download_sample_data
 from freemocap.diagnostics.headless_calibration import headless_calibration
-from freemocap.diagnostics.calibration.calibration_utils import get_charuco_2d_data
+from freemocap.diagnostics.calibration.calibration_utils import (
+    get_charuco_2d_data,
+    calculate_calibration_diagnostics
+)
 import numpy as np
+import json                                      
+
 # Configure logging
 logger = logging.getLogger(__name__)
 
@@ -63,15 +68,32 @@ def setup_session():
     logger.info("Getting 3d Charuco data")
     anipose_calibration_object = freemocap_anipose.CameraGroup.load(str(calibration_toml_path))
 
-
     data_3d, *_ = triangulate_3d_data(
         anipose_calibration_object=anipose_calibration_object,
         image_2d_data=charuco_2d_xy
     )
-    charuco_save_path = Path(SessionInfo.recording_info_model.output_data_folder_path) / 'charuco_3d_xyz.npy'
-    np.save(
-        charuco_save_path, data_3d)
-    logger.info(f"3D Charuco data saved successfully to {charuco_save_path}") 
+    
+    np.save(SessionInfo.sample_session_folder_path / "output_data"/"charuco_3d_xyz.npy", data_3d)
+
+    board_info = {
+        "square_size_mm": anipose_calibration_object.metadata["charuco_square_size"],
+        "num_squares_height": CharucoBoardDefinition().number_of_squares_height,
+        "num_squares_width": CharucoBoardDefinition().number_of_squares_width,
+    }
+
+    info_path = SessionInfo.sample_session_folder_path / "charuco_board_info.json"
+    with open(info_path, "w", encoding="utf-8") as fh:
+        json.dump(board_info, fh, indent=4)
+
+    # stats = calculate_calibration_diagnostics(
+    #     charuco_3d_data=data_3d,
+    #     charuco_square_size_mm= anipose_calibration_object.metadata["charuco_square_size"],
+    #     number_of_squares_height=CharucoBoardDefinition().number_of_squares_height,
+    #     number_of_squares_width=CharucoBoardDefinition().number_of_squares_width
+    # )
+    
+
+    # logger.info(f"Calibration diagnostics: {stats}")
     logger.info("Session setup complete!")
 
 def get_sample_session_path():

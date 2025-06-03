@@ -56,7 +56,6 @@ def setup_session():
         make_jupyter_notebook=False,
         use_tqdm=False,
     )
-
     logger.info("Session setup complete!")
 
 def get_sample_session_path():
