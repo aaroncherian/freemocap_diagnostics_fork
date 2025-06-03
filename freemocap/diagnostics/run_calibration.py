@@ -73,7 +73,7 @@ def setup_session():
         image_2d_data=charuco_2d_xy
     )
     
-    np.save(SessionInfo.sample_session_folder_path / "output_data"/"charuco_3d_xyz.npy", data_3d)
+    np.save(Path(SessionInfo.sample_session_folder_path) / "output_data"/"charuco_3d_xyz.npy", data_3d)
 
     board_info = {
         "square_size_mm": anipose_calibration_object.metadata["charuco_square_size"],
@@ -81,7 +81,7 @@ def setup_session():
         "num_squares_width": CharucoBoardDefinition().number_of_squares_width,
     }
 
-    info_path = SessionInfo.sample_session_folder_path / "charuco_board_info.json"
+    info_path = Path(SessionInfo.sample_session_folder_path) / "charuco_board_info.json"
     with open(info_path, "w", encoding="utf-8") as fh:
         json.dump(board_info, fh, indent=4)
 
