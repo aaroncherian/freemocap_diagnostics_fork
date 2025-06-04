@@ -1,4 +1,4 @@
-name: Regression – camera calibration
+name: Camera calibration tests
 on:
   workflow_dispatch:
 

@@ -9,40 +9,32 @@ logger = logging.getLogger(__name__)
 from pathlib import Path
 from typing import Union
 
-from freemocap.core_processes.capture_volume_calibration.anipose_camera_calibration.anipose_camera_calibrator import (
-    AniposeCameraCalibrator,
-)
+# from freemocap.core_processes.capture_volume_calibration.anipose_camera_calibration.anipose_camera_calibrator import (
+#     AniposeCameraCalibrator,
+# )
 from freemocap.core_processes.capture_volume_calibration.charuco_stuff.charuco_board_definition import (
     CharucoBoardDefinition,
 )
 
 
-def headless_calibration(
-        path_to_folder_of_calibration_videos: Path,
-        charuco_board_object=CharucoBoardDefinition,
-        charuco_square_size: Union[int, float] = 39,
-        pin_camera_0_to_origin: bool = True,
-):
-    anipose_camera_calibrator = AniposeCameraCalibrator(
-        charuco_board_object=charuco_board_object,
-        charuco_square_size=charuco_square_size,
-        calibration_videos_folder_path=path_to_folder_of_calibration_videos,
-        progress_callback=lambda *args, **kwargs: None,
-        # the empty callable is needed, otherwise calibration will cause an error
-    )
+# def headless_calibration(
+#         path_to_folder_of_calibration_videos: Path,
+#         charuco_board_object=CharucoBoardDefinition,
+#         charuco_square_size: Union[int, float] = 39,
+#         pin_camera_0_to_origin: bool = True,
+# ):
+#     anipose_camera_calibrator = AniposeCameraCalibrator(
+#         charuco_board_object=charuco_board_object,
+#         charuco_square_size=charuco_square_size,
+#         calibration_videos_folder_path=path_to_folder_of_calibration_videos,
+#         progress_callback=lambda *args, **kwargs: None,
+#         # the empty callable is needed, otherwise calibration will cause an error
+#     )
 
-    return anipose_camera_calibrator.calibrate_camera_capture_volume(pin_camera_0_to_origin=pin_camera_0_to_origin)
+#     return anipose_camera_calibrator.calibrate_camera_capture_volume(pin_camera_0_to_origin=pin_camera_0_to_origin)
 
 
-if __name__ == "__main__":
-    path_to_folder_of_calibration_videos = Path(r"C:\Users\aaron\freemocap_data\recording_sessions\freemocap_test_data_123_zero_proper\synchronized_videos")
-    charuco_square_size = 58  # size of a black square on your charuco board in mm
-
-    headless_calibration(
-        path_to_folder_of_calibration_videos=path_to_folder_of_calibration_videos,
-        charuco_square_size=charuco_square_size,
-    )
-
+from freemocap.core_processes.capture_volume_calibration.run_anipose_capture_volume_calibration import run_anipose_capture_volume_calibration
 
 
 class SessionInfo:              # unchanged
@@ -67,9 +59,11 @@ def setup_session() -> Path:
     )
 
     logger.info("Running headless calibration…")
-    toml_path = headless_calibration(
+    toml_path = run_anipose_capture_volume_calibration(
         path_to_folder_of_calibration_videos=get_sync_video_folder(),
         charuco_square_size=58,
+        charuco_board_definition=CharucoBoardDefinition(),
+        progress_callback=lambda _: None,  
     )
     return Path(toml_path)
 

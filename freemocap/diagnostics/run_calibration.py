@@ -53,7 +53,8 @@ def setup_session():
     calibration_toml_path = run_anipose_capture_volume_calibration(
         charuco_board_definition=CharucoBoardDefinition(),
         calibration_videos_folder_path=get_synchronized_video_folder_path(),
-        charuco_square_size=58) # its difficult not to hardcode this at this point, but we should consider adding metadata that we can pull from to get this
+        charuco_square_size=58,
+        progress_callback= lambda _: None) # its difficult not to hardcode this at this point, but we should consider adding metadata that we can pull from to get this
     
     charuco_2d_xy = get_charuco_2d_data(
         calibration_videos_folder_path=get_synchronized_video_folder_path(),
