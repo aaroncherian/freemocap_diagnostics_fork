@@ -32,5 +32,42 @@ jobs:
     - name: Upload calibration file
       uses: actions/upload-artifact@v4
       with:
-        name: calibrations-${{ runner.os }}
+        name: calibrations-${{ runner.os }}-${{ matrix.freemocap }}   # add version
         path: calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml
+        
+  bundle:
+    needs: calibrate
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download all calibration artifacts
+      uses: actions/download-artifact@v4
+      with:
+        pattern: calibrations-*      # grabs every version/OS
+        path: collected              # e.g. collected/calibrations-ubuntu-latest-0.0.3/…
+
+    # Re-organise by OS and zip
+    - name: Repackage into per-OS zips
+      run: |
+        mkdir merged
+        shopt -s globstar
+        for file in collected/**/calibration_*.toml; do
+          # filename example: calibration_windows-latest_0.0.4.toml
+          base=$(basename "$file")
+          os="${base%%_*}"                 # calibration_windows-latest
+          os="${os#calibration_}"          # windows-latest
+          mkdir -p "merged/$os"
+          cp "$file" "merged/$os/"
+        done
+
+        cd merged
+        for d in *; do
+          zip -r "../${d}_calibrations.zip" "$d"
+        done
+
+    - name: Upload per-OS bundles
+      uses: actions/upload-artifact@v4
+      with:
+        name: calibrations-bundled          # single artifact, 3 zips inside
+        path: |
+          *_calibrations.zip
