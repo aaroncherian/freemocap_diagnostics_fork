@@ -23,8 +23,10 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install "freemocap==${{ matrix.freemocap }}"
 
-    - name: Run sample calibration
+    - name: Run calibration script
+      shell: bash                    # <-- add this
       run: |
+        source .venv/bin/activate || source .venv/Scripts/activate
         python .github/scripts/run_calibration_tests.py \
           --out "calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml"
 
@@ -34,7 +36,7 @@ jobs:
       with:
         name: calibrations-${{ runner.os }}-${{ matrix.freemocap }}   # add version
         path: calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml
-        
+
   bundle:
     needs: calibrate
     runs-on: ubuntu-latest
