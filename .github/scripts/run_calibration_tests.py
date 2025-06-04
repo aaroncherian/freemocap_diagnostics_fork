@@ -60,7 +60,7 @@ def setup_session() -> Path:
 
     logger.info("Running headless calibration…")
     toml_path = run_anipose_capture_volume_calibration(
-        path_to_folder_of_calibration_videos=get_sync_video_folder(),
+        calibration_videos_folder_path=get_sync_video_folder(),
         charuco_square_size=58,
         charuco_board_definition=CharucoBoardDefinition(),
         progress_callback=lambda _: None,  
