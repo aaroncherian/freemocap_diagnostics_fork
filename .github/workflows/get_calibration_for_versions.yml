@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        freemocap: ["0.0.3", "0.0.4", "0.1.0"]
+        freemocap: ["1.5.4", "1.5.3"]
 
     steps:
     - uses: actions/checkout@v4
