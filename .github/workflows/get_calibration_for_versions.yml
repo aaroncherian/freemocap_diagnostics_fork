@@ -18,6 +18,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: "3.11" }
 
+      # NEW ────────────────────────────────────────────────────────────────
       - name: Create .venv with uv and install FreeMoCap
         shell: bash
         run: |
@@ -26,7 +27,7 @@ jobs:
           uv venv                                  # makes .venv
           source .venv/bin/activate || source .venv/Scripts/activate
           uv pip install "freemocap==${{ matrix.freemocap }}"
-
+      # ────────────────────────────────────────────────────────────────────
 
       - name: Run calibration script
         shell: bash
@@ -72,4 +73,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: calibrations-bundled
-          path: *_calibrations.zip
+          path: | 
+          *_calibrations.zip
