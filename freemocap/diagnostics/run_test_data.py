@@ -6,69 +6,10 @@ from freemocap.core_processes.process_motion_capture_videos.process_recording_he
     find_calibration_toml_path,
 )
 from freemocap.data_layer.recording_models.recording_info_model import RecordingInfoModel
+from freemocap.utilities.download_sample_data import download_sample_data
 from freemocap.diagnostics.headless_calibration import headless_calibration
-import os
 # Configure logging
 logger = logging.getLogger(__name__)
-
-import io
-import logging
-import zipfile
-from pathlib import Path
-
-import requests
-
-from freemocap.system.paths_and_filenames.file_and_folder_names import (
-    FIGSHARE_SAMPLE_ZIP_FILE_URL,
-    FREEMOCAP_SAMPLE_DATA_RECORDING_NAME,
-    FREEMOCAP_TEST_DATA_RECORDING_NAME,
-    FIGSHARE_TEST_ZIP_FILE_URL,
-)
-from freemocap.system.paths_and_filenames.path_getters import get_recording_session_folder_path
-
-logger = logging.getLogger(__name__)
-
-
-def get_sample_data_path(download_if_needed: bool = True) -> str:
-    sample_data_path = str(Path(get_recording_session_folder_path()) / FREEMOCAP_TEST_DATA_RECORDING_NAME)
-    if not Path(sample_data_path).exists():
-        if download_if_needed:
-            download_sample_data()
-        else:
-            raise Exception(f"Could not find sample data at {sample_data_path} (and `download_if_needed` is False)")
-
-    return sample_data_path
-
-
-def download_sample_data(sample_data_zip_file_url: str = FIGSHARE_TEST_ZIP_FILE_URL) -> str:
-    try:
-        logger.info(f"Downloading sample data from {sample_data_zip_file_url}...")
-
-        recording_session_folder_path = Path(get_recording_session_folder_path())
-        recording_session_folder_path.mkdir(parents=True, exist_ok=True)
-
-        r = requests.get(sample_data_zip_file_url, stream=True, timeout=(5, 60))
-        r.raise_for_status()  # Check if request was successful
-
-        z = zipfile.ZipFile(io.BytesIO(r.content))
-        z.extractall(recording_session_folder_path)
-
-        if sample_data_zip_file_url == FIGSHARE_TEST_ZIP_FILE_URL:
-            figshare_sample_data_path = recording_session_folder_path / FREEMOCAP_TEST_DATA_RECORDING_NAME
-        elif sample_data_zip_file_url == FIGSHARE_SAMPLE_ZIP_FILE_URL:
-            figshare_sample_data_path = recording_session_folder_path / FREEMOCAP_SAMPLE_DATA_RECORDING_NAME
-        else:
-            figshare_sample_data_path = recording_session_folder_path / FREEMOCAP_TEST_DATA_RECORDING_NAME
-        logger.info(f"Sample data extracted to {str(figshare_sample_data_path)}")
-        return str(figshare_sample_data_path)
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Request failed: {e}")
-        raise e
-    except zipfile.BadZipFile as e:
-        logger.error(f"Failed to unzip the file: {e}")
-        raise e
-
 
 class SessionInfo:
     """
@@ -103,17 +44,19 @@ def setup_session():
 
     logger.info('Calibrating')
     calibration_toml_path = headless_calibration(path_to_folder_of_calibration_videos=get_synchronized_video_folder_path(),
-                                                 charuco_square_size=58)
-    calibration_toml_path = find_calibration_toml_path(SessionInfo.sample_session_folder_path)
-    logger.info("Processing motion capture data...")
-    process_recording_headless(
-        recording_path=SessionInfo.sample_session_folder_path,
-        path_to_camera_calibration_toml=calibration_toml_path,
-        recording_info_model=SessionInfo.recording_info_model,
-        run_blender=False,
-        make_jupyter_notebook=False,
-        use_tqdm=False,
-    )
+                                                 charuco_square_size=127)
+    
+    # calibration_toml_path = find_calibration_toml_path(SessionInfo.sample_session_folder_path)
+    # logger.info("Processing motion capture data...")
+    # process_recording_headless(
+    #     recording_path=SessionInfo.sample_session_folder_path,
+    #     path_to_camera_calibration_toml=calibration_toml_path,
+    #     recording_info_model=SessionInfo.recording_info_model,
+    #     run_blender=False,
+    #     make_jupyter_notebook=False,
+    #     use_tqdm=False,
+    # )
+
     logger.info("Session setup complete!")
 
 def get_sample_session_path():
