@@ -13,63 +13,63 @@ jobs:
         freemocap: ["1.5.4", "1.5.3"]
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - uses: actions/setup-python@v5
-      with: { python-version: "3.11" }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
 
-    - name: Install specific FreeMoCap
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install "freemocap==${{ matrix.freemocap }}"
+      - name: Create .venv with uv and install FreeMoCap
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install uv
+          uv venv                                  # makes .venv
+          source .venv/bin/activate || source .venv/Scripts/activate
+          uv pip install "freemocap==${{ matrix.freemocap }}"
 
-    - name: Run calibration script
-      shell: bash                    # <-- add this
-      run: |
-        source .venv/bin/activate || source .venv/Scripts/activate
-        python .github/scripts/run_calibration_tests.py \
-          --out "calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml"
 
-    # 👇 Same artifact name for every version on the same OS → files get bundled
-    - name: Upload calibration file
-      uses: actions/upload-artifact@v4
-      with:
-        name: calibrations-${{ runner.os }}-${{ matrix.freemocap }}   # add version
-        path: calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml
+      - name: Run calibration script
+        shell: bash
+        run: |
+          source .venv/bin/activate || source .venv/Scripts/activate
+          python .github/scripts/run_calibration_tests.py \
+            --out "calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml"
+
+      - name: Upload calibration file
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibrations-${{ runner.os }}-${{ matrix.freemocap }}
+          path: calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml
 
   bundle:
     needs: calibrate
     runs-on: ubuntu-latest
-
     steps:
-    - name: Download all calibration artifacts
-      uses: actions/download-artifact@v4
-      with:
-        pattern: calibrations-*      # grabs every version/OS
-        path: collected              # e.g. collected/calibrations-ubuntu-latest-0.0.3/…
+      - name: Download all calibration artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: calibrations-*        # grabs every version/OS
+          path: collected
 
-    # Re-organise by OS and zip
-    - name: Repackage into per-OS zips
-      run: |
-        mkdir merged
-        shopt -s globstar
-        for file in collected/**/calibration_*.toml; do
-          # filename example: calibration_windows-latest_0.0.4.toml
-          base=$(basename "$file")
-          os="${base%%_*}"                 # calibration_windows-latest
-          os="${os#calibration_}"          # windows-latest
-          mkdir -p "merged/$os"
-          cp "$file" "merged/$os/"
-        done
+      - name: Re-package into per-OS zips
+        shell: bash
+        run: |
+          mkdir merged
+          shopt -s globstar
+          for file in collected/**/calibration_*.toml; do
+            base=$(basename "$file")
+            os="${base%%_*}"          # extract windows-latest, etc.
+            os="${os#calibration_}"
+            mkdir -p "merged/$os"
+            cp "$file" "merged/$os/"
+          done
+          cd merged
+          for d in *; do
+            zip -r "../${d}_calibrations.zip" "$d"
+          done
 
-        cd merged
-        for d in *; do
-          zip -r "../${d}_calibrations.zip" "$d"
-        done
-
-    - name: Upload per-OS bundles
-      uses: actions/upload-artifact@v4
-      with:
-        name: calibrations-bundled          # single artifact, 3 zips inside
-        path: |
-          *_calibrations.zip
+      - name: Upload per-OS bundles
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibrations-bundled
+          path: *_calibrations.zip
