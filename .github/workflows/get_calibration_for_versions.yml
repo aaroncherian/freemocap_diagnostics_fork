@@ -25,7 +25,7 @@ jobs:
 
     - name: Run sample calibration
       run: |
-        python .github/scripts/run_calibration.py \
+        python .github/scripts/run_calibration_tests.py \
           --out "calibration_${{ runner.os }}_${{ matrix.freemocap }}.toml"
 
     # 👇 Same artifact name for every version on the same OS → files get bundled
