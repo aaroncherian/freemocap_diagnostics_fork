@@ -1,69 +1,94 @@
+import argparse
 import logging
 from pathlib import Path
-
-from freemocap.core_processes.process_motion_capture_videos.process_recording_headless import (
-    process_recording_headless,
-    find_calibration_toml_path,
-)
-from freemocap.data_layer.recording_models.recording_info_model import RecordingInfoModel
 from freemocap.utilities.download_sample_data import download_sample_data
-from freemocap.diagnostics.headless_calibration import headless_calibration
-import os
-# Configure logging
+from freemocap.data_layer.recording_models.recording_info_model import RecordingInfoModel
+
 logger = logging.getLogger(__name__)
 
-class SessionInfo:
-    """
-    Stores paths to key processed data files.
-    """
+from pathlib import Path
+from typing import Union
+
+from freemocap.core_processes.capture_volume_calibration.anipose_camera_calibration.anipose_camera_calibrator import (
+    AniposeCameraCalibrator,
+)
+from freemocap.core_processes.capture_volume_calibration.charuco_stuff.charuco_board_definition import (
+    CharucoBoardDefinition,
+)
+
+
+def headless_calibration(
+        path_to_folder_of_calibration_videos: Path,
+        charuco_board_object=CharucoBoardDefinition,
+        charuco_square_size: Union[int, float] = 39,
+        pin_camera_0_to_origin: bool = True,
+):
+    anipose_camera_calibrator = AniposeCameraCalibrator(
+        charuco_board_object=charuco_board_object,
+        charuco_square_size=charuco_square_size,
+        calibration_videos_folder_path=path_to_folder_of_calibration_videos,
+        progress_callback=lambda *args, **kwargs: None,
+        # the empty callable is needed, otherwise calibration will cause an error
+    )
+
+    return anipose_camera_calibrator.calibrate_camera_capture_volume(pin_camera_0_to_origin=pin_camera_0_to_origin)
+
+
+if __name__ == "__main__":
+    path_to_folder_of_calibration_videos = Path(r"C:\Users\aaron\freemocap_data\recording_sessions\freemocap_test_data_123_zero_proper\synchronized_videos")
+    charuco_square_size = 58  # size of a black square on your charuco board in mm
+
+    headless_calibration(
+        path_to_folder_of_calibration_videos=path_to_folder_of_calibration_videos,
+        charuco_square_size=charuco_square_size,
+    )
+
+
+
+class SessionInfo:              # unchanged
     sample_session_folder_path: str
     recording_info_model: RecordingInfoModel
 
-def setup_session():
-    """
-    Downloads sample data and processes it. 
-    Stores all important paths for easy access.
-    """
-    logger.info("Downloading sample data...")
-    # SessionInfo.sample_session_folder_path = Path(r'/home/runner/work/freemocap_fork/freemocap_fork/freemocap/freemocap_test_data')
-    # if os.name == 'nt':
-    #     SessionInfo.sample_session_folder_path = download_sample_data(sample_data_zip_file_url='https://github.com/aaroncherian/freemocap_fork/releases/download/v0.0.4-alpha/freemocap_test_data.zip')
-    # elif os.name == 'posix':
-    #     SessionInfo.sample_session_folder_path = download_sample_data()
 
-    SessionInfo.sample_session_folder_path = download_sample_data(sample_data_zip_file_url='https://github.com/aaroncherian/freemocap_fork/releases/download/v0.0.4-alpha/freemocap_test_data.zip')
+def setup_session() -> Path:
+    """Download sample data and run the calibration; return the TOML path."""
+    logger.info("Downloading sample data…")
+    SessionInfo.sample_session_folder_path = download_sample_data(
+        sample_data_zip_file_url=(
+            "https://github.com/aaroncherian/freemocap_fork/releases/download/"
+            "v0.0.4-alpha/freemocap_test_data.zip"
+        )
+    )
 
-
-    # logger.info("Finding calibration file...")
-    # calibration_toml_path = find_calibration_toml_path(SessionInfo.sample_session_folder_path)
-
-    logger.info("Initializing recording model...")
+    logger.info("Initializing recording model…")
     SessionInfo.recording_info_model = RecordingInfoModel(
         recording_folder_path=SessionInfo.sample_session_folder_path,
         active_tracker="mediapipe",
     )
 
-    logger.info('Calibrating')
-    calibration_toml_path = headless_calibration(path_to_folder_of_calibration_videos=get_synchronized_video_folder_path(),
-                                                 charuco_square_size=58)
-    
-def get_sample_session_path():
-    return Path(SessionInfo.sample_session_folder_path)
+    logger.info("Running headless calibration…")
+    toml_path = headless_calibration(
+        path_to_folder_of_calibration_videos=get_sync_video_folder(),
+        charuco_square_size=58,
+    )
+    return Path(toml_path)
 
-def get_synchronized_video_folder_path():
+
+def get_sync_video_folder() -> Path:
     return Path(SessionInfo.recording_info_model.synchronized_videos_folder_path)
 
-def get_data_folder_path():
-    return Path(SessionInfo.recording_info_model.output_data_folder_path)
 
-def get_raw_skeleton_data():
-    return Path(SessionInfo.recording_info_model.raw_data_3d_npy_file_path)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--out",
+        type=Path,
+        required=True,
+        help="Absolute or relative path (incl. filename) for the calibration .toml",
+    )
+    args = parser.parse_args()
 
-def get_total_body_center_of_mass_data():
-    return Path(SessionInfo.recording_info_model.total_body_center_of_mass_npy_file_path)
-
-def get_image_tracking_data():
-    return Path(SessionInfo.recording_info_model.data_2d_npy_file_path)
-
-def get_reprojection_error_data():
-    return Path(SessionInfo.recording_info_model.reprojection_error_data_npy_file_path)
+    produced = setup_session()
+    args.out.parent.mkdir(parents=True, exist_ok=True)
+    produced.rename(args.out)          # move/rename in one shot
+    print(f"Saved → {args.out.resolve()}")
