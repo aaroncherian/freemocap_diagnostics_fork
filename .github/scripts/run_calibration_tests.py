@@ -129,6 +129,7 @@ def get_sync_video_folder() -> Path:
 
 
 if __name__ == "__main__":
+    import shutil
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--out",
@@ -140,5 +141,5 @@ if __name__ == "__main__":
 
     produced = setup_session()
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    produced.rename(args.out)          # move/rename in one shot
+    shutil.move(produced, args.out)      
     print(f"Saved → {args.out.resolve()}")
