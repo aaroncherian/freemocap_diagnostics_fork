@@ -111,7 +111,6 @@ def setup_session() -> Path:
     logger.info("Initializing recording model…")
     SessionInfo.recording_info_model = RecordingInfoModel(
         recording_folder_path=SessionInfo.sample_session_folder_path,
-        active_tracker="mediapipe",
     )
 
     logger.info("Running headless calibration…")
