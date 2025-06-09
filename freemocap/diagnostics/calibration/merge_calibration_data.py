@@ -5,7 +5,6 @@
 """
 from pathlib import Path
 import pandas as pd
-from packaging.version import parse as vparse
 import subprocess, sys
 
 root = Path(__file__).resolve().parents[2]  # repo root

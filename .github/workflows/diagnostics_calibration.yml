@@ -98,6 +98,7 @@ jobs:
 
         - name: Merge rows + regenerate report
           run: |
+            uv pip install pandas plotly jinja2
             python freemocap/diagnostics/calibration/merge_calibration_data.py
   # aggregate-artifacts:
   #   runs-on: ubuntu-latest
