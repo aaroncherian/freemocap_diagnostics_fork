@@ -8,9 +8,9 @@ from freemocap.diagnostics.calibration.calibration_utils import (
 )
 import numpy as np
 import json
+from dataclasses import asdict
 
-def run(path_to_recording: Path,
-        freemocap_version: str):
+def run(path_to_recording: Path):
     
     path_to_3d_data = path_to_recording/"output_data"/"charuco_3d_xyz.npy"
     charuco_3d_data = np.load(path_to_3d_data)
@@ -34,7 +34,11 @@ def run(path_to_recording: Path,
         charuco_square_size_mm=charuco_square_size_mm
     )
 
-    print(square_stats)
+    path_to_save_square_stats = path_to_recording / "charuco_square_stats.json"
+    with open(path_to_save_square_stats, "w", encoding="utf-8") as fh:
+        json.dump(asdict(square_stats), fh, indent=4)
+    print(f"Square stats saved to {path_to_save_square_stats}")
+    
 
 
 if __name__ == "__main__":
