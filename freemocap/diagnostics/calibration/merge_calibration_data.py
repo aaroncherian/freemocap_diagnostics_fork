@@ -7,35 +7,37 @@ from pathlib import Path
 import pandas as pd
 import subprocess, sys
 
-root = Path(__file__).resolve().parents[2]  # repo root
-summary_csv = root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
+repo_root   = Path(__file__).resolve().parents[1]          # repo root
+summary_csv = repo_root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
 collected   = Path("collected")
 
-# 1) read existing summary (or create fresh)
+print(f"Collecting calibration rows from {collected} → {summary_csv}")
+
+# 1) read existing summary (or fail loudly)
 if summary_csv.exists():
     full_df = pd.read_csv(summary_csv)
 else:
-    full_df = pd.DataFrame(columns=["os","version","mean_distance","std_distance"])
+    raise FileNotFoundError(
+        f"Expected summary CSV not found: {summary_csv}\n"
+        "Run build_calibration_dataset.py once to create it."
+    )
 
 # 2) ingest each per-OS row
-rows = []
-for csv_file in collected.glob("**/*.csv"):
-    rows.append(pd.read_csv(csv_file))
-
+rows = [pd.read_csv(csv_file) for csv_file in collected.glob("**/*.csv")]
 if not rows:
     sys.exit("❌ No calibration rows found!")
 
 new_df = pd.concat(rows, ignore_index=True)
 
-# drop any old rows tagged "current"
+# 3) drop previous “current” rows, append fresh ones, save
 full_df = full_df[full_df["version"] != "current"]
-
-# append & save
 full_df = pd.concat([full_df, new_df], ignore_index=True)
+
+summary_csv.parent.mkdir(parents=True, exist_ok=True)      # ensure dir exists
 full_df.to_csv(summary_csv, index=False)
 print(f"✅ summary updated → {summary_csv}")
 
-# 3) regenerate HTML report
+# 4) regenerate HTML report
 subprocess.run(
     [sys.executable, "freemocap/diagnostics/calibration/generate_calibration_report.py"],
     check=True
