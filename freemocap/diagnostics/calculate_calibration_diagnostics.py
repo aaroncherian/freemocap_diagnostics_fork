@@ -5,12 +5,14 @@ from freemocap.diagnostics.calibration.calibration_utils import (
 )
 import numpy as np
 import json
-from dataclasses import asdict
-
+from pathlib import Path
+import platform
+import csv
 def run(path_to_recording: Path):
     
     path_to_3d_data = path_to_recording/"output_data"/"charuco_3d_xyz.npy"
     charuco_3d_data = np.load(path_to_3d_data)
+    artifact_csv= Path("calib_row.csv")  
 
     path_to_json = path_to_recording/"charuco_board_info.json"
     with open(path_to_json, "r", encoding="utf-8") as fh:
@@ -29,12 +31,32 @@ def run(path_to_recording: Path):
     square_stats = get_neighbor_stats(
         distances=distances_between_squares,
         charuco_square_size_mm=charuco_square_size_mm
-    )
+    )   
 
-    path_to_save_square_stats = path_to_recording / "charuco_square_stats.json"
-    with open(path_to_save_square_stats, "w", encoding="utf-8") as fh:
-        json.dump(asdict(square_stats), fh, indent=4)
-    print(f"Square stats saved to {path_to_save_square_stats}")
+    raw_os = platform.system()
+    os_map = {"Darwin": "macOS", "Windows": "Windows", "Linux": "Linux"}
+    os_name = os_map.get(raw_os, raw_os)
+
+    row = {
+    "os"           : os_name,              # Windows / Linux / Darwin
+    "version"      : "current",                      # tag for this run
+    "mean_distance": square_stats["mean_distance"],
+    "median_distance": square_stats["median_distance"],
+    "std_distance" : square_stats["std_distance"],
+    "mean_error"   : square_stats["mean_error"],
+    }
+
+    with open(artifact_csv, "w", newline="") as fh:
+        writer = csv.DictWriter(fh, fieldnames=row.keys())
+        writer.writeheader()
+        writer.writerow(row)
+
+    print(f"✅ one-row CSV written → {artifact_csv}")
+
+    # path_to_save_square_stats = path_to_recording / "charuco_square_stats.json"
+    # with open(path_to_save_square_stats, "w", encoding="utf-8") as fh:
+    #     json.dump(asdict(square_stats), fh, indent=4)
+    # print(f"Square stats saved to {path_to_save_square_stats}")
     
 
 

@@ -56,6 +56,11 @@ jobs:
         run: |
           source .venv/bin/activate || source .venv/Scripts/activate
           python freemocap/diagnostics/calculate_calibration_diagnostics.py
+      
+      - uses: actions/upload-artifact@v4
+        with:
+          name: calib_row_${{ runner.os }}
+          path: calib_row.csv
 
       - name: Generate diagnostic report
         shell: bash
@@ -79,7 +84,21 @@ jobs:
           path: |
             ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
 
+  merge-and-report:
+      needs: [windows, mac, linux]      
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
 
+        # download all single-row CSVs
+        - uses: actions/download-artifact@v4
+          with:
+            pattern: calib_row_*
+            path: collected
+
+        - name: Merge rows + regenerate report
+          run: |
+            python .github/scripts/merge_calibration_rows.py
   # aggregate-artifacts:
   #   runs-on: ubuntu-latest
   #   needs: run-diagnostics
