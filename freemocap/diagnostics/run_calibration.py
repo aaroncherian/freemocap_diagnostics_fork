@@ -45,10 +45,16 @@ def setup_session():
     )
     
     logger.info('Calibrating')
+
+    board_info_path = Path(SessionInfo.sample_session_folder_path) / "charuco_board_info.json"
+    with open(board_info_path, "r", encoding="utf-8") as fh:
+        board_info = json.load(fh)
+
+    charuco_square_size = board_info["square_size_mm"]
     calibration_toml_path = run_anipose_capture_volume_calibration(
         charuco_board_definition=CharucoBoardDefinition(),
         calibration_videos_folder_path=get_synchronized_video_folder_path(),
-        charuco_square_size=58, # its difficult not to hardcode this at this point, but we should consider adding metadata that we can pull from to get this
+        charuco_square_size=charuco_square_size
         progress_callback= lambda _: None) 
     
     charuco_2d_xy = get_charuco_2d_data(
@@ -70,16 +76,6 @@ def setup_session():
     )
     
     np.save(Path(SessionInfo.sample_session_folder_path) / "output_data"/"charuco_3d_xyz.npy", data_3d)
-
-    board_info = {
-        "square_size_mm": anipose_calibration_object.metadata["charuco_square_size"],
-        "num_squares_height": CharucoBoardDefinition().number_of_squares_height,
-        "num_squares_width": CharucoBoardDefinition().number_of_squares_width,
-    }
-
-    info_path = Path(SessionInfo.sample_session_folder_path) / "charuco_board_info.json"
-    with open(info_path, "w", encoding="utf-8") as fh:
-        json.dump(board_info, fh, indent=4)
 
     # stats = calculate_calibration_diagnostics(
     #     charuco_3d_data=data_3d,
