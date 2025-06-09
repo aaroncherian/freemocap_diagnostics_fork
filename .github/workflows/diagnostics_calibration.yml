@@ -57,19 +57,19 @@ jobs:
           source .venv/bin/activate || source .venv/Scripts/activate
           python freemocap/diagnostics/calculate_calibration_diagnostics.py
 
-      # - name: Generate diagnostic report
-      #   shell: bash
-      #   run: |
-      #     source .venv/bin/activate || source .venv/Scripts/activate
-      #     uv pip install jinja2
-      #     python freemocap/diagnostics/generate_diagnostic_report.py
+      - name: Generate diagnostic report
+        shell: bash
+        run: |
+          source .venv/bin/activate || source .venv/Scripts/activate
+          uv pip install jinja2
+          python freemocap/diagnostics/generate_calibration_report.py
 
-      # # Upload individual per-OS diagnostic report
-      # - name: Upload OS-specific diagnostic report
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: diagnostic_report_${{ matrix.os }}
-      #     path: freemocap/diagnostics/version_diagnostics/diagnostic_report.html
+      # Upload individual per-OS diagnostic report
+      - name: Upload OS-specific diagnostic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostic_report_${{ matrix.os }}
+          path: freemocap/diagnostics/calibration_diagnostics.html
 
       # Upload individual per-OS test data
       - name: Upload OS-specific calibration

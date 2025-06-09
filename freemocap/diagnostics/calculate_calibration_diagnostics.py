@@ -1,7 +1,4 @@
 from pathlib import Path
-from freemocap.core_processes.capture_volume_calibration.charuco_stuff.charuco_board_definition import (
-    CharucoBoardDefinition,
-)
 from freemocap.diagnostics.calibration.calibration_utils import (
     get_neighbor_distances,
     get_neighbor_stats
@@ -54,5 +51,5 @@ if __name__ == "__main__":
     else:
         raise RuntimeError(f"Unsupported OS: {sys.platform}")
 
-    run(path_to_recording=path_to_recording,)
+    run(path_to_recording=path_to_recording)
 
