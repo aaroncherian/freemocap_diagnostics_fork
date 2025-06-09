@@ -54,7 +54,5 @@ if __name__ == "__main__":
     else:
         raise RuntimeError(f"Unsupported OS: {sys.platform}")
 
-    freemocap_version = 'current'
-    run(path_to_recording=path_to_recording,
-        freemocap_version=freemocap_version)
+    run(path_to_recording=path_to_recording,)
 
