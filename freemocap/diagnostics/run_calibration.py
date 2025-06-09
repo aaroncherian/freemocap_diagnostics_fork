@@ -1,10 +1,6 @@
 import logging
 from pathlib import Path
 
-from freemocap.core_processes.process_motion_capture_videos.process_recording_headless import (
-    process_recording_headless,
-    find_calibration_toml_path,
-)
 from freemocap.core_processes.capture_volume_calibration.run_anipose_capture_volume_calibration import run_anipose_capture_volume_calibration
 from freemocap.core_processes.capture_volume_calibration.anipose_camera_calibration import (
     freemocap_anipose,
@@ -15,18 +11,17 @@ from freemocap.core_processes.capture_volume_calibration.charuco_stuff.charuco_b
 from freemocap.core_processes.capture_volume_calibration.triangulate_3d_data import triangulate_3d_data
 from pathlib import Path
 from freemocap.data_layer.recording_models.recording_info_model import RecordingInfoModel
-from freemocap.utilities.download_sample_data import download_sample_data
-from freemocap.diagnostics.headless_calibration import headless_calibration
+from freemocap.diagnostics.download_data import download_test
 from freemocap.diagnostics.calibration.calibration_utils import (
     get_charuco_2d_data,
-    calculate_calibration_diagnostics
 )
+
 import numpy as np
 import json                                      
 
 # Configure logging
 logger = logging.getLogger(__name__)
-
+download_test
 class SessionInfo:
     """
     Stores paths to key processed data files.
@@ -41,7 +36,7 @@ def setup_session():
     """
     logger.info("Downloading sample data...")
 
-    SessionInfo.sample_session_folder_path = download_sample_data(sample_data_zip_file_url='https://github.com/aaroncherian/freemocap_fork/releases/download/v0.0.4-alpha/freemocap_test_data.zip')
+    SessionInfo.sample_session_folder_path = download_test()
 
     logger.info("Initializing recording model...")
     SessionInfo.recording_info_model = RecordingInfoModel(
@@ -53,8 +48,8 @@ def setup_session():
     calibration_toml_path = run_anipose_capture_volume_calibration(
         charuco_board_definition=CharucoBoardDefinition(),
         calibration_videos_folder_path=get_synchronized_video_folder_path(),
-        charuco_square_size=58,
-        progress_callback= lambda _: None) # its difficult not to hardcode this at this point, but we should consider adding metadata that we can pull from to get this
+        charuco_square_size=58, # its difficult not to hardcode this at this point, but we should consider adding metadata that we can pull from to get this
+        progress_callback= lambda _: None) 
     
     charuco_2d_xy = get_charuco_2d_data(
         calibration_videos_folder_path=get_synchronized_video_folder_path(),
