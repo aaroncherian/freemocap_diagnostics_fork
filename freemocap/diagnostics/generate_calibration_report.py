@@ -10,7 +10,7 @@ EXPECTED = 58.0
 OS_ORDER = ["Windows", "macOS", "Linux"]
 
 def load_summary_data():
-    summary_csv = Path("freemocap/diagnostics/calibration_diagnostics_summary.csv")
+    summary_csv = Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
     df = pd.read_csv(summary_csv)
     df["version_key"] = df["version"].apply(vparse)
     df = df.sort_values(["os", "version_key"])
