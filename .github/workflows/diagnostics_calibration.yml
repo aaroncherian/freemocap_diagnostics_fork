@@ -85,7 +85,7 @@ jobs:
             ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
 
   merge-and-report:
-      needs: [windows, mac, linux]      
+      needs: diagnostics   
       runs-on: ubuntu-latest
       steps:
         - uses: actions/checkout@v4
