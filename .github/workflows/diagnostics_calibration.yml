@@ -86,7 +86,12 @@ jobs:
 
   merge-and-report:
     needs: run-diagnostics
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
+    
+    env:
+      PYTHONIOENCODING: utf-8
+      PYTHONUTF8: 1
+      PYTHONLEGACYWINDOWSSTDIO: 1
 
     steps:
       - uses: actions/checkout@v4
