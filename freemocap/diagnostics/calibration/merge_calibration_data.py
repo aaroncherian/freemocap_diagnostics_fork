@@ -69,9 +69,20 @@ full_df = pd.concat([full_df, new_df], ignore_index=True)
 # Ensure OS names are standardized
 full_df["os"] = full_df["os"].str.strip()
 
+# Remove duplicates - keep only the latest entry for each os/version combination
+print(f"Before deduplication: {len(full_df)} rows")
+full_df = full_df.drop_duplicates(subset=['os', 'version'], keep='last')
+print(f"After deduplication: {len(full_df)} rows")
+
 print(f"Final dataframe has {len(full_df)} rows")
 print(f"OS values: {full_df['os'].unique()}")
 print(f"Version values: {full_df['version'].unique()}")
+
+# Show duplicate check
+duplicates = full_df[full_df.duplicated(subset=['os', 'version'], keep=False)]
+if len(duplicates) > 0:
+    print(f"WARNING: Still have {len(duplicates)} duplicate rows!")
+    print(duplicates[['os', 'version']].value_counts())
 
 summary_csv.parent.mkdir(parents=True, exist_ok=True)
 full_df.to_csv(summary_csv, index=False)
