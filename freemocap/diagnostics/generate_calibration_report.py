@@ -19,7 +19,7 @@ def safe_parse(ver: str) -> Version:
     return CURRENT_SENTINEL if ver == "current" else vparse(ver)
 
 def load_summary_data():
-    summary_csv = Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
+    summary_csv = Path(r"freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
     df = pd.read_csv(summary_csv)
 
     df["version_key"] = df["version"].apply(safe_parse)
@@ -55,7 +55,7 @@ def generate_figures(df):
 
     # Figure 2 – Per OS, post-1.6.0
     post = df[df["version_key"] >= vparse("1.6.0")]
-    post = pd.concat([post, df[df["version_key"] == CURRENT_SENTINEL]])
+    # post = pd.concat([post, df[df["version_key"] == CURRENT_SENTINEL]])
     
     fig2 = make_subplots(rows=1, cols=3, shared_yaxes=True, subplot_titles=OS_ORDER)
     for col, os_name in enumerate(OS_ORDER, start=1):
@@ -111,7 +111,7 @@ def generate_figures(df):
     return fig1, fig2, fig3
 
 def generate_summary_table(df):
-    latest = df.groupby("os").tail(1) 
+    latest = df.groupby("os").head(1) 
     table = go.Figure(data=[go.Table(
         header=dict(
             values=["OS", "Mean Square Size ± SD (mm)", "Mean Error (mm)"],
