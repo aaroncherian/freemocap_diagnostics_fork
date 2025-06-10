@@ -111,6 +111,12 @@ jobs:
           source .venv/bin/activate
           python freemocap/diagnostics/calibration/merge_calibration_data.py
 
+      - name: Upload merged calibration report
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged_calibration_report
+          path: freemocap/diagnostics/calibration_diagnostics.html
+
   # aggregate-artifacts:
   #   runs-on: ubuntu-latest
   #   needs: run-diagnostics
