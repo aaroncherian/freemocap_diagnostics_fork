@@ -33,6 +33,6 @@ full_df.to_csv(summary_csv, index=False)
 print("✅ summary updated:", summary_csv)
 
 # 4) regenerate HTML
-report_script = repo_root / "freemocap/diagnostics/calibration/generate_calibration_report.py"
+report_script = repo_root / "freemocap/diagnostics/generate_calibration_report.py"
 subprocess.run([sys.executable, str(report_script)], check=True)
 print("🎉 HTML report regenerated")
