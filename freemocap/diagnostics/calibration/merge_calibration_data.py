@@ -25,7 +25,7 @@ if not rows:
 new_df = pd.concat(rows, ignore_index=True)
 
 # 3) replace old 'current' rows and save
-full_df = full_df[full_df["version"] != "1.6.4"]
+full_df = full_df[full_df["version"] != "current"]
 full_df = pd.concat([full_df, new_df], ignore_index=True)
 
 summary_csv.parent.mkdir(parents=True, exist_ok=True)
