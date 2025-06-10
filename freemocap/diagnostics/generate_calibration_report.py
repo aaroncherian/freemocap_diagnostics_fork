@@ -2,7 +2,6 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from packaging.version import parse as vparse
 import plotly.io as pio
 from jinja2 import Template
 from packaging.version import parse as vparse, Version
@@ -22,8 +21,12 @@ def safe_parse(ver: str) -> Version:
 def load_summary_data():
     summary_csv = Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
     df = pd.read_csv(summary_csv)
-    df["version_key"] = df["version"].apply(vparse)
-    df = df.sort_values(["os", "version_key"])
+
+    df["version_key"] = df["version"].apply(safe_parse)
+
+    # newest first, ‘current’ will naturally be on top
+    df = df.sort_values(["os", "version_key"], ascending=[True, False])
+
     df["mean_error"] = df["mean_distance"] - EXPECTED
     return df
 
@@ -50,6 +53,8 @@ def generate_figures(df):
 
     # Figure 2 – Per OS, post-1.6.0
     post = df[df["version_key"] >= vparse("1.6.0")]
+    post = pd.concat([post, df[df["version_key"] == CURRENT_SENTINEL]])
+    
     fig2 = make_subplots(rows=1, cols=3, shared_yaxes=True, subplot_titles=OS_ORDER)
     for col, os_name in enumerate(OS_ORDER, start=1):
         g = post[post["os"].str.lower() == os_name.lower()].sort_values("version_key")
@@ -103,7 +108,7 @@ def generate_figures(df):
     return fig1, fig2, fig3
 
 def generate_summary_table(df):
-    latest = df.sort_values("version_key").groupby("os").tail(1)
+    latest = df.groupby("os").head(1)
     table = go.Figure(data=[go.Table(
         header=dict(
             values=["OS", "Mean Square Size ± SD (mm)", "Mean Error (mm)"],
