@@ -8,7 +8,7 @@ import pandas as pd
 import subprocess, sys
 
 repo_root   = Path(__file__).resolve().parents[1]          # repo root
-summary_csv = repo_root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
+summary_csv = "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
 collected   = Path("collected")
 
 print(f"Collecting calibration rows from {collected} → {summary_csv}")
