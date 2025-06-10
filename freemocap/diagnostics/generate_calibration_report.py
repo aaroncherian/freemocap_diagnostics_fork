@@ -5,9 +5,19 @@ from plotly.subplots import make_subplots
 from packaging.version import parse as vparse
 import plotly.io as pio
 from jinja2 import Template
+from packaging.version import parse as vparse, Version
+
+CURRENT_SENTINEL = Version("9999.0.0")   # big so it always sorts “latest”
 
 EXPECTED = 58.0
 OS_ORDER = ["Windows", "macOS", "Linux"]
+
+def safe_parse(ver: str) -> Version:
+    """
+    Parse semantic versions; return a giant sentinel for the tag 'current'
+    so it always sorts last (most recent) and passes numeric comparisons.
+    """
+    return CURRENT_SENTINEL if ver == "current" else vparse(ver)
 
 def load_summary_data():
     summary_csv = Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
