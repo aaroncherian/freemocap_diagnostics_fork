@@ -23,6 +23,7 @@ def load_summary_data():
     df = pd.read_csv(summary_csv)
 
     df["version_key"] = df["version"].apply(safe_parse)
+    df = df.sort_values(["os", "version_key"])
 
     # newest first, ‘current’ will naturally be on top
     df = df.sort_values(["os", "version_key"], ascending=[True, False])
@@ -34,7 +35,8 @@ def generate_figures(df):
     # Figure 1 – All OS mean distance
     fig1 = go.Figure()
     for os_name in OS_ORDER:
-        sub = df[df["os"].str.lower() == os_name.lower()]
+        sub = df[df["os"].str.lower() == os_name.lower()] \
+                .sort_values("version_key")
         fig1.add_scatter(
             x=sub["version"], y=sub["mean_distance"],
             mode="lines+markers", name=os_name
@@ -57,7 +59,8 @@ def generate_figures(df):
     
     fig2 = make_subplots(rows=1, cols=3, shared_yaxes=True, subplot_titles=OS_ORDER)
     for col, os_name in enumerate(OS_ORDER, start=1):
-        g = post[post["os"].str.lower() == os_name.lower()].sort_values("version_key")
+        g = post[post["os"].str.lower() == os_name.lower()] \
+                .sort_values("version_key")
         fig2.add_scatter(
             x=g["version"], y=g["mean_distance"],
             error_y=dict(type='data', array=g["std_distance"], visible=True),
@@ -108,7 +111,7 @@ def generate_figures(df):
     return fig1, fig2, fig3
 
 def generate_summary_table(df):
-    latest = df.groupby("os").head(1)
+    latest = df.groupby("os").tail(1) 
     table = go.Figure(data=[go.Table(
         header=dict(
             values=["OS", "Mean Square Size ± SD (mm)", "Mean Error (mm)"],
