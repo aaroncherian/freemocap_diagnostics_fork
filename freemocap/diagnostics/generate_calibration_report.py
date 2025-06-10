@@ -7,16 +7,12 @@ from jinja2 import Template
 from packaging.version import parse as vparse, Version
 import sys
 
-CURRENT_SENTINEL = Version("9999.0.0")   # big so it always sorts "latest"
-
+CURRENT_SENTINEL = Version("9999.0.0")
 EXPECTED = 58.0
 OS_ORDER = ["Windows", "macOS", "Linux"]
 
 def safe_parse(ver: str) -> Version:
-    """
-    Parse semantic versions; return a giant sentinel for the tag 'current'
-    so it always sorts last (most recent) and passes numeric comparisons.
-    """
+    """Parse semantic versions; return a giant sentinel for 'current'"""
     return CURRENT_SENTINEL if ver == "current" else vparse(ver)
 
 def load_summary_data():
@@ -42,8 +38,19 @@ def load_summary_data():
     print(f"Loading data from: {summary_csv}")
     df = pd.read_csv(summary_csv)
     
-    # Standardize OS names
+    # Debug: print raw data
+    print("\n=== RAW DATA ===")
+    print(df.to_string())
+    print(f"\nShape: {df.shape}")
+    print(f"Columns: {list(df.columns)}")
+    print(f"Unique OS values: {df['os'].unique()}")
+    print(f"Unique version values: {df['version'].unique()}")
+    
+    # Standardize OS names - remove any whitespace and fix case
     df["os"] = df["os"].str.strip()
+    
+    # Debug: Check OS values after cleaning
+    print(f"\nAfter cleaning OS values: {df['os'].unique()}")
     
     # Add version_key for sorting
     df["version_key"] = df["version"].apply(safe_parse)
@@ -52,12 +59,16 @@ def load_summary_data():
     if "mean_error" not in df.columns:
         df["mean_error"] = df["mean_distance"] - EXPECTED
     
-    # Sort by OS and version (ascending OS, ascending version)
+    # Sort by OS and version
     df = df.sort_values(["os", "version_key"], ascending=[True, True])
     
-    print(f"Loaded {len(df)} rows")
-    print(f"OS values: {df['os'].unique()}")
-    print(f"Version values: {df['version'].unique()}")
+    # Debug: print sorted data
+    print("\n=== SORTED DATA ===")
+    for os_name in OS_ORDER:
+        os_data = df[df["os"] == os_name]
+        print(f"\n{os_name}: {len(os_data)} rows")
+        if len(os_data) > 0:
+            print(os_data[["version", "mean_distance", "std_distance"]].to_string())
     
     return df
 
@@ -65,11 +76,18 @@ def generate_figures(df):
     # Figure 1 – All OS mean distance over all versions
     fig1 = go.Figure()
     
+    print("\n=== FIGURE 1 DATA ===")
+    
     for os_name in OS_ORDER:
-        # Filter and sort data for this OS
+        # Try exact match first
         os_df = df[df["os"] == os_name].sort_values("version_key")
         
+        print(f"\n{os_name}: {len(os_df)} data points")
+        
         if len(os_df) > 0:
+            print(f"  Versions: {list(os_df['version'])}")
+            print(f"  Values: {list(os_df['mean_distance'])}")
+            
             fig1.add_scatter(
                 x=os_df["version"], 
                 y=os_df["mean_distance"],
@@ -97,8 +115,12 @@ def generate_figures(df):
     )
 
     # Figure 2 – Per OS, post-1.6.0
+    print("\n=== FIGURE 2 DATA ===")
+    
     # Filter for versions >= 1.6.0 (including "current")
     post = df[(df["version_key"] >= vparse("1.6.0")) | (df["version"] == "current")]
+    print(f"Post-1.6.0 data: {len(post)} rows")
+    print(f"OS distribution: {post['os'].value_counts().to_dict()}")
     
     fig2 = make_subplots(rows=1, cols=3, shared_yaxes=True, 
                          subplot_titles=OS_ORDER,
@@ -107,6 +129,11 @@ def generate_figures(df):
     for col, os_name in enumerate(OS_ORDER, start=1):
         # Get data for this OS and sort by version
         os_data = post[post["os"] == os_name].sort_values("version_key")
+        
+        print(f"\n{os_name} (subplot {col}): {len(os_data)} points")
+        if len(os_data) > 0:
+            print(f"  Versions: {list(os_data['version'])}")
+            print(f"  Values: {list(os_data['mean_distance'])}")
         
         if len(os_data) > 0:
             # Add scatter plot with error bars
@@ -168,10 +195,17 @@ def generate_figures(df):
     )
 
     # Figure 3 – Mean error plot
+    print("\n=== FIGURE 3 DATA ===")
+    
     fig3 = go.Figure()
     
     for os_name in OS_ORDER:
         os_data = post[post["os"] == os_name].sort_values("version_key")
+        
+        print(f"\n{os_name}: {len(os_data)} points")
+        if len(os_data) > 0:
+            print(f"  Versions: {list(os_data['version'])}")
+            print(f"  Errors: {list(os_data['mean_error'])}")
         
         if len(os_data) > 0:
             fig3.add_trace(go.Scatter(
@@ -202,11 +236,29 @@ def generate_figures(df):
     return fig1, fig2, fig3
 
 def generate_summary_table(df):
+    print("\n=== TABLE DATA ===")
+    
     # Get the latest data for each OS (highest version_key)
     latest = df.sort_values("version_key", ascending=False).groupby("os").first().reset_index()
     
-    # Ensure OS order
-    latest = latest.set_index('os').reindex(OS_ORDER).reset_index()
+    print("Latest data per OS:")
+    print(latest[["os", "version", "mean_distance", "std_distance", "mean_error"]].to_string())
+    
+    # Create ordered dataframe
+    ordered_latest = pd.DataFrame()
+    for os_name in OS_ORDER:
+        os_row = latest[latest["os"] == os_name]
+        if len(os_row) > 0:
+            ordered_latest = pd.concat([ordered_latest, os_row])
+    
+    if len(ordered_latest) == 0:
+        print("WARNING: No data for table!")
+        ordered_latest = pd.DataFrame({
+            "os": OS_ORDER,
+            "mean_distance": [0, 0, 0],
+            "std_distance": [0, 0, 0],
+            "mean_error": [0, 0, 0]
+        })
     
     table = go.Figure(data=[go.Table(
         header=dict(
@@ -217,9 +269,9 @@ def generate_summary_table(df):
         ),
         cells=dict(
             values=[
-                latest["os"],
-                [f"{m:.2f} ± {s:.2f}" for m, s in zip(latest["mean_distance"], latest["std_distance"])],
-                [f"{e:.2f}" for e in latest["mean_error"]]
+                ordered_latest["os"],
+                [f"{m:.2f} ± {s:.2f}" for m, s in zip(ordered_latest["mean_distance"], ordered_latest["std_distance"])],
+                [f"{e:.2f}" for e in ordered_latest["mean_error"]]
             ],
             align="center",
             font=dict(size=16),
@@ -251,10 +303,14 @@ def generate_html_report(df, output_path="freemocap/diagnostics/calibration_diag
             body { font-family: Arial, sans-serif; margin: 40px; }
             h1 { color: #333; }
             .plot-container { margin: 20px 0; }
+            pre { background: #f0f0f0; padding: 10px; overflow-x: auto; }
         </style>
     </head>
     <body>
         <h1>Calibration Diagnostics Report</h1>
+        
+        <hr><h2>Debug Information</h2>
+        <pre>{{ debug_info }}</pre>
 
         <hr><h2>Latest Calibration Summary (per OS)</h2>
         <p>Expected square size: <strong>{{ expected }} mm</strong></p>
@@ -274,18 +330,31 @@ def generate_html_report(df, output_path="freemocap/diagnostics/calibration_diag
     </html>
     """)
 
+    # Capture debug info
+    import io
+    import sys
+    old_stdout = sys.stdout
+    sys.stdout = buffer = io.StringIO()
+    
+    # Re-run data loading to capture debug output
+    _ = load_summary_data()
+    
+    debug_output = buffer.getvalue()
+    sys.stdout = old_stdout
+
     rendered = template.render(
         fig1=pio.to_html(fig1, include_plotlyjs=False, full_html=False),
         fig2=pio.to_html(fig2, include_plotlyjs=False, full_html=False),
         fig3=pio.to_html(fig3, include_plotlyjs=False, full_html=False),
         table=pio.to_html(table, include_plotlyjs=False, full_html=False),
-        expected=EXPECTED
+        expected=EXPECTED,
+        debug_info=debug_output
     )
 
     output_file = Path(output_path)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     output_file.write_text(rendered, encoding="utf-8")
-    print(f"✅ Calibration report written to: {output_file.absolute()}")
+    print(f"\n✅ Calibration report written to: {output_file.absolute()}")
 
 if __name__ == "__main__":
     df = load_summary_data()

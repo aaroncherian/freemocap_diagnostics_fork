@@ -32,13 +32,32 @@ rows = []
 for f in csv_files:
     try:
         df = pd.read_csv(f)
-        print(f"  Read {len(df)} rows from {f.name}")
+        print(f"\n  Reading {f.name}:")
+        print(f"    Shape: {df.shape}")
+        print(f"    Columns: {list(df.columns)}")
+        if len(df) > 0:
+            print(f"    First row:")
+            print(f"      OS: '{df.iloc[0]['os']}'")
+            print(f"      Version: '{df.iloc[0]['version']}'")
+            print(f"      Mean distance: {df.iloc[0]['mean_distance']}")
         rows.append(df)
     except Exception as e:
         print(f"  Error reading {f}: {e}")
+        # Try to read raw content
+        try:
+            with open(f, 'r') as fh:
+                print(f"  Raw content of {f.name}:")
+                print(fh.read())
+        except:
+            pass
+
+if not rows:
+    sys.exit("❌ No valid CSV data found")
 
 new_df = pd.concat(rows, ignore_index=True)
-print(f"Combined into {len(new_df)} new rows")
+print(f"\nCombined into {len(new_df)} new rows")
+print(f"New data preview:")
+print(new_df.to_string())
 
 # Standardize OS names
 new_df["os"] = new_df["os"].str.strip()
