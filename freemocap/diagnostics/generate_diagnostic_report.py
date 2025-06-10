@@ -1,25 +1,65 @@
 from pathlib import Path
-import pandas as pd 
-
+import pandas as pd
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.io as pio
+from jinja2 import Template
+from packaging.version import parse as vparse, Version
+import sys
 
-import plotly.express as px
+CURRENT_SENTINEL = Version("9999.0.0")
+EXPECTED = 58.0
+OS_ORDER = ["Windows", "macOS", "Linux"]
 
-from packaging.version import Version, parse
+def safe_parse(ver: str) -> Version:
+    """Parse semantic versions; return a giant sentinel for 'current'"""
+    return CURRENT_SENTINEL if ver == "current" else vparse(ver)
 
-def plot_jerk_trends(total_df):
-    # Reset index for easy handling in Plotly
-    plot_df = total_df[total_df['name']=='total'].copy()
+def load_summary_data():
+    # Try to find the CSV in multiple locations
+    possible_paths = [
+        Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"),
+        Path("calibration_diagnostics_summary.csv"),
+        Path.cwd() / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv",
+    ]
     
-    # Get all versions
-    all_versions = plot_df['version'].unique().tolist()
+    summary_csv = None
+    for path in possible_paths:
+        if path.exists():
+            summary_csv = path
+            break
+    
+    if summary_csv is None:
+        print(f"Could not find calibration_diagnostics_summary.csv")
+        sys.exit(1)
+    
+    df = pd.read_csv(summary_csv)
+    
+    # Remove any duplicates
+    df = df.drop_duplicates(subset=['os', 'version'], keep='last')
+    
+    # Standardize OS names
+    df["os"] = df["os"].str.strip()
+    
+    # Add version_key for sorting
+    df["version_key"] = df["version"].apply(safe_parse)
+    
+    # Calculate mean_error if not present
+    if "mean_error" not in df.columns:
+        df["mean_error"] = df["mean_distance"] - EXPECTED
+    
+    return df
+
+def generate_figures(df):
+    # Get all versions in sorted order
+    all_versions = df['version'].unique().tolist()
     
     # Separate 'current' from version numbers
     current_version = 'current' if 'current' in all_versions else None
     numeric_versions = [v for v in all_versions if v != 'current']
     
     # Sort using packaging.version.Version
-    sorted_versions = sorted(numeric_versions, key=parse)
+    sorted_versions = sorted(numeric_versions, key=vparse)
     
     # Add 'current' at the end if it exists
     if current_version:
@@ -29,230 +69,273 @@ def plot_jerk_trends(total_df):
     version_to_index = {v: i for i, v in enumerate(sorted_versions)}
     
     # Add a sort key to the dataframe
-    plot_df['sort_key'] = plot_df['version'].map(version_to_index)
+    df['sort_key'] = df['version'].map(version_to_index)
     
-    # Create a new dataframe with data sorted by data_stage and version
-    sorted_plot_data = []
+    # Figure 1 – All OS mean distance over all versions
+    fig1 = go.Figure()
     
-    # Process each data_stage separately
-    for stage in plot_df['data_stage'].unique():
-        stage_data = plot_df[plot_df['data_stage'] == stage].copy()
+    # Process each OS separately and add traces
+    for os_name in OS_ORDER:
+        os_data = df[df['os'] == os_name].copy()
         # Sort by our custom sort key
-        stage_data = stage_data.sort_values('sort_key')
-        sorted_plot_data.append(stage_data)
-    
-    # Combine back to a single dataframe
-    sorted_plot_df = pd.concat(sorted_plot_data)
-    
-    # Create an empty figure
-    fig = go.Figure()
-    
-    # Add each data series manually to ensure proper order
-    for stage in sorted_plot_df['data_stage'].unique():
-        stage_data = sorted_plot_df[sorted_plot_df['data_stage'] == stage]
+        os_data = os_data.sort_values('sort_key')
         
-        fig.add_trace(go.Scatter(
-            x=stage_data['version'], 
-            y=stage_data['mean_jerk'],
-            mode='lines+markers',
-            name=stage,
-            connectgaps=True
-        ))
+        if len(os_data) > 0:
+            fig1.add_trace(go.Scatter(
+                x=os_data['version'],
+                y=os_data['mean_distance'],
+                mode='lines+markers',
+                name=os_name,
+                connectgaps=True,
+                line=dict(width=2),
+                marker=dict(size=8)
+            ))
     
-    # Update layout
-    fig.update_layout(
-        title="Jerk Trends Across Versions",
+    # Add expected line
+    fig1.add_hline(y=EXPECTED, line_dash="dash", line_color="black", 
+                   annotation_text="Expected size", annotation_position="top right")
+    
+    # Update layout with proper category ordering
+    fig1.update_layout(
+        title="Mean Charuco Square Size (mm) – all operating systems",
         xaxis=dict(
-            title="version",
+            title="FreeMoCap Version",
             type='category',
             categoryorder='array',
-            categoryarray=sorted_versions
+            categoryarray=sorted_versions,
+            tickfont=dict(size=16),
+            title_font=dict(size=22)
         ),
-        yaxis=dict(title="mean_jerk")
+        yaxis=dict(
+            title="Square Size Estimate (mm)",
+            tickfont=dict(size=18),
+            title_font=dict(size=20)
+        ),
+        title_font=dict(size=20),
+        height=500,
+        showlegend=True,
+        legend=dict(x=0.02, y=0.98, xanchor="left", yanchor="top")
+    )
+
+    # Figure 2 – Per OS, post-1.6.0
+    # Filter for versions >= 1.6.0 
+    post_versions = [v for v in sorted_versions if v == 'current' or (v != 'current' and vparse(v) >= vparse("1.6.0"))]
+    post = df[df['version'].isin(post_versions)]
+    
+    fig2 = make_subplots(rows=1, cols=3, shared_yaxes=True, 
+                         subplot_titles=OS_ORDER,
+                         horizontal_spacing=0.1)
+    
+    for col, os_name in enumerate(OS_ORDER, start=1):
+        os_data = post[post["os"] == os_name].copy()
+        os_data = os_data.sort_values('sort_key')
+        
+        if len(os_data) > 0:
+            # Add scatter plot with error bars
+            fig2.add_trace(go.Scatter(
+                x=os_data['version'],
+                y=os_data['mean_distance'],
+                error_y=dict(
+                    type='data',
+                    array=os_data['std_distance'],
+                    visible=True,
+                    width=4,
+                    thickness=2
+                ),
+                mode='markers',
+                marker=dict(size=10, color=f"rgb({col*70}, {100+col*30}, {200-col*50})"),
+                showlegend=False
+            ), row=1, col=col)
+            
+            # Add value annotations
+            for _, row in os_data.iterrows():
+                fig2.add_annotation(
+                    x=row['version'],
+                    y=row['mean_distance'] + row['std_distance'] + 0.3,
+                    text=f"{row['mean_distance']:.2f}±{row['std_distance']:.2f}",
+                    showarrow=False,
+                    yanchor="bottom",
+                    row=1,
+                    col=col,
+                    font=dict(size=10)
+                )
+        
+        # Add expected line
+        fig2.add_hline(y=EXPECTED, line_dash="dash", line_color="black", 
+                       row=1, col=col)
+        
+        # Update x-axis with category ordering
+        fig2.update_xaxes(
+            tickfont=dict(size=14),
+            title_font=dict(size=16),
+            title_text="Version",
+            type='category',
+            categoryorder='array',
+            categoryarray=post_versions,
+            row=1, col=col
+        )
+    
+    # Update y-axis (only for first subplot)
+    fig2.update_yaxes(
+        tickfont=dict(size=14),
+        title_font=dict(size=16),
+        title_text="Square-size estimate (mm)",
+        range=[EXPECTED - 3, EXPECTED + 3],
+        row=1, col=1
     )
     
-    return fig
+    fig2.update_layout(
+        title="Charuco Square Size Estimate – versions ≥ 1.6.0",
+        title_font=dict(size=20),
+        height=400
+    )
 
-def format_jerk_table(total_df):
-    """
-    Creates separate tables for each data stage with color mapping based on differences 
-    from v1.2.0 values using a scientific colormap, with improved aesthetics.
-    """
-    import pandas as pd
-    import numpy as np
-    import matplotlib.pyplot as plt
+    # Figure 3 – Mean error plot
+    fig3 = go.Figure()
     
-    # Extract unique data_stages
-    data_stages = sorted(total_df['data_stage'].unique())
+    for os_name in OS_ORDER:
+        os_data = post[post["os"] == os_name].copy()
+        os_data = os_data.sort_values('sort_key')
+        
+        if len(os_data) > 0:
+            fig3.add_trace(go.Scatter(
+                x=os_data['version'],
+                y=os_data['mean_error'],
+                mode='lines+markers',
+                name=os_name,
+                connectgaps=True,
+                line=dict(width=2),
+                marker=dict(size=8)
+            ))
     
-    # Set up scientific colormaps - using RdBu_r (reversed Red-Blue) which is perceptually uniform
-    cmap_diverging = plt.cm.RdBu_r
+    fig3.add_hline(y=0, line_dash="dot", line_color="gray", 
+                   annotation_text="No error", annotation_position="top right")
     
-    # Create a function to apply color based on percentage difference from reference
-    def color_diff_from_reference(val, ref_val):
-        if pd.isna(val) or pd.isna(ref_val) or ref_val == 0:
-            return ''
-        
-        # Calculate percentage difference
-        pct_diff = (val - ref_val) / ref_val * 100
-        
-        # Cap the difference for extreme values (adjust this range as needed)
-        max_pct = 60.0  # Increased from 50 to reduce overly intense colors
-        
-        # Use a non-linear scaling to improve color distribution
-        # This reduces the intensity for moderate differences
-        if pct_diff > 0:  # Worse than reference
-            # Use square root scaling for smoother gradient
-            normalized_diff = min(np.sqrt(pct_diff / max_pct), 1.0)
-            norm_val = 0.5 + (normalized_diff * 0.5)  # Map to 0.5-1.0 range (red half)
-        elif pct_diff < 0:  # Better than reference
-            # Use square root scaling for smoother gradient
-            normalized_diff = min(np.sqrt(abs(pct_diff) / max_pct), 1.0)
-            norm_val = 0.5 - (normalized_diff * 0.5)  # Map to 0.0-0.5 range (blue half)
-        else:  # Equal to reference
-            norm_val = 0.5  # Middle point (white/neutral)
-        
-        # Get RGB color from the colormap
-        rgba = cmap_diverging(norm_val)
-        rgb = rgba[:3]  # Extract RGB (ignore alpha)
-        
-        # Add a slight transparency to soften the colors
-        # Convert to rgba with transparency
-        return f'background-color: rgba({int(rgb[0]*255)}, {int(rgb[1]*255)}, {int(rgb[2]*255)}, 0.85)'
+    fig3.update_layout(
+        title="Mean Error in Square Size Estimate (Post v1.6.0)",
+        xaxis=dict(
+            title="FreeMoCap version",
+            type='category',
+            categoryorder='array',
+            categoryarray=post_versions,
+            tickfont=dict(size=16),
+            title_font=dict(size=22)
+        ),
+        yaxis=dict(
+            title="Mean error (mm)",
+            tickfont=dict(size=18),
+            title_font=dict(size=20)
+        ),
+        height=400,
+        showlegend=True,
+        legend=dict(x=0.02, y=0.98, xanchor="left", yanchor="top")
+    )
+
+    return fig1, fig2, fig3
+
+def generate_summary_table(df):
+    # Get the latest data for each OS
+    latest_rows = []
+    for os_name in OS_ORDER:
+        os_df = df[df["os"] == os_name]
+        if len(os_df) > 0:
+            # Get the row with the highest version_key
+            latest = os_df.loc[os_df['version_key'].idxmax()]
+            latest_rows.append(latest)
     
-    # Function to create a styled table for each data stage
-    def create_stage_table(stage):
-        # Filter data for this stage
-        stage_df = total_df[total_df['data_stage'] == stage]
-        
-        # Pivot to get versions as columns
-        pivot_df = stage_df.pivot(index="name", columns="version", values="mean_jerk")
-        
-        # Get reference values (1.2.0)
-        reference_values = pivot_df['1.2.0']
-        
-        # Define styling function
-        def style_columns(col):
-            if col.name == '1.2.0':
-                # Neutral color for reference column
-                return ['background-color: #f7f7f7' for _ in col]
-            else:
-                # Apply coloring based on difference from reference
-                return [color_diff_from_reference(val, reference_values[idx]) 
-                        for idx, val in col.items()]
-        
-        # Function to bold the total row
-        def bold_total(s):
-            return ['font-weight: bold' if s.name == "total" else '' for _ in s]
-        
-        # Style the table
-        styled_table = (
-            pivot_df.style
-            .set_table_styles([
-                {"selector": "thead th", "props": [("font-weight", "bold"), 
-                                                  ("background-color", "#f4f4f4"), 
-                                                  ("text-align", "center"),
-                                                  ("padding", "8px 5px")]},
-                {"selector": "tbody td", "props": [("text-align", "center"), 
-                                                  ("min-width", "60px"), 
-                                                  ("padding", "6px 5px")]},
-                {"selector": "tbody tr:nth-child(even)", "props": [("background-color", "#f9f9f9")]},
-                {"selector": "caption", "props": [("caption-side", "top"), 
-                                                 ("font-weight", "bold"),
-                                                 ("font-size", "16px"),
-                                                 ("padding", "15px 0 10px 0"),
-                                                 ("text-align", "left")]},
-                {"selector": "table", "props": [("border-collapse", "separate"),
-                                               ("border-spacing", "0"),
-                                               ("width", "100%"),
-                                               ("margin-bottom", "25px"),
-                                               ("box-shadow", "0 1px 3px rgba(0,0,0,0.1)")]}
-            ])
-            .apply(style_columns, axis=0)
-            .apply(bold_total, axis=1)
-            .format("{:.2f}")
+    if not latest_rows:
+        # Fallback if no data
+        latest_df = pd.DataFrame({
+            "os": OS_ORDER,
+            "mean_distance": [0, 0, 0],
+            "std_distance": [0, 0, 0],
+            "mean_error": [0, 0, 0]
+        })
+    else:
+        latest_df = pd.DataFrame(latest_rows)
+    
+    table = go.Figure(data=[go.Table(
+        header=dict(
+            values=["OS", "Mean Square Size ± SD (mm)", "Mean Error (mm)"],
+            fill_color='lightgray',
+            align='center',
+            font=dict(size=18)
+        ),
+        cells=dict(
+            values=[
+                latest_df["os"].tolist(),
+                [f"{m:.2f} ± {s:.2f}" for m, s in zip(
+                    latest_df["mean_distance"], 
+                    latest_df["std_distance"]
+                )],
+                [f"{e:.2f}" for e in latest_df["mean_error"]]
+            ],
+            align="center",
+            font=dict(size=16),
+            height=30,
+            fill_color='#f8f9fa'
         )
-        
-        # Add a title for the table with stage name highlighted
-        styled_table.set_caption(f"{stage.capitalize()} Data - Jerk Values")
-        
-        return styled_table.to_html()
+    )])
     
-    # Create HTML for all tables with a color legend and page title
-    html_output = """
-    <div style="max-width: 1200px; margin: 0 auto; font-family: Arial, sans-serif;">
-        <h2 style="text-align: center; margin: 20px 0;">Summary Table: Jerk Across Versions</h2>
-        
-        <div style="text-align: center; margin: 25px 0; padding: 10px; background-color: #f0f0f0; border-radius: 5px; font-weight: bold; font-size: 14px;">
-            Jerk Values: Blue = Improvement from v1.2.0, Red = Degradation from v1.2.0
-        </div>
-    """
+    table.update_layout(
+        title="Latest Calibration Summary (per OS)",
+        margin=dict(t=60, l=0, r=0),
+        height=250
+    )
     
-    # Add tables for each data stage
-    for stage in data_stages:
-        html_output += f"""
-        <div style="margin-bottom: 40px;">
-            {create_stage_table(stage)}
-        </div>
-        """
-    
-    # Close the container div
-    html_output += "</div>"
-    
-    return html_output
+    return table
 
+def generate_html_report(df, output_path="freemocap/diagnostics/calibration_diagnostics.html"):
+    fig1, fig2, fig3 = generate_figures(df)
+    table = generate_summary_table(df)
 
-
-from jinja2 import Template
-def generate_html_report(total_df, output_path="diagnostic_report.html"):
-
-    jerk_plot = plot_jerk_trends(total_df).to_html(full_html=False)
-    html_table = format_jerk_table(total_df)
-
-    html_template = """
+    template = Template("""
+    <!DOCTYPE html>
     <html>
     <head>
-        <title>Motion Capture Diagnostic Report</title>
+        <meta charset='utf-8'>
+        <title>Calibration Diagnostics Report</title>
+        <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             h1 { color: #333; }
-            .plot { margin-bottom: 40px; }
-            .table-container { margin-top: 40px; }
+            .plot-container { margin: 20px 0; }
         </style>
     </head>
     <body>
-        <h1>Motion Capture Diagnostic Report</h1>
-        
-        <h2>Jerk Trends Across Versions</h2>
-        <div class="plot">{{ jerk_plot|safe }}</div>
-        
-        <h2>Summary Table: Jerk Across Versions</h2>
-        <div class="table-container">{{ html_table|safe }}</div>
+        <h1>Calibration Diagnostics Report</h1>
+
+        <hr><h2>Latest Calibration Summary (per OS)</h2>
+        <p>Expected square size: <strong>{{ expected }} mm</strong></p>
+        <div style='max-width:1200px; margin:auto;'>{{ table|safe }}</div>
+
+        <hr><h2>Mean Charuco Square Size Per OS</h2>
+        <div class="plot-container">{{ fig1|safe }}</div>
+        <p style='font-size:0.9em;'>Dashed line = expected size.</p>
+
+        <hr><h2>Mean Charuco Square Size – versions ≥ 1.6.0</h2>
+        <div class="plot-container">{{ fig2|safe }}</div>
+        <p style='font-size:0.9em;'>Error bars show ±1 SD; numerical values annotated.</p>
+
+        <hr><h2>Mean Square Size Error – versions ≥ 1.6.0</h2>
+        <div class="plot-container">{{ fig3|safe }}</div>
     </body>
     </html>
-    """
+    """)
 
-    # Render the HTML
-    template = Template(html_template)
-    rendered_html = template.render(jerk_plot=jerk_plot, html_table=html_table)
+    rendered = template.render(
+        fig1=fig1.to_html(full_html=False, include_plotlyjs=False),
+        fig2=fig2.to_html(full_html=False, include_plotlyjs=False),
+        fig3=fig3.to_html(full_html=False, include_plotlyjs=False),
+        table=table.to_html(full_html=False, include_plotlyjs=False),
+        expected=EXPECTED
+    )
 
-    # Save to file
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(rendered_html)
+    output_file = Path(output_path)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_text(rendered, encoding="utf-8")
+    print(f"✅ Calibration report written to: {output_file.absolute()}")
 
-    print(f"Report saved at: {output_path}")
-    
 if __name__ == "__main__":
-
-    path_to_diagnostics_folder =  Path(r'freemocap/diagnostics/version_diagnostics')
-    
-
-    results_list = list(path_to_diagnostics_folder.glob('*.csv'))
-    total_df = pd.DataFrame()
-
-    for result in results_list:
-        result_df = pd.read_csv(result)
-        total_df = pd.concat([total_df, result_df], ignore_index=True)
-
-    output_report_path = path_to_diagnostics_folder / "diagnostic_report.html"
-    generate_html_report(total_df, output_report_path)    
+    df = load_summary_data()
+    generate_html_report(df)
