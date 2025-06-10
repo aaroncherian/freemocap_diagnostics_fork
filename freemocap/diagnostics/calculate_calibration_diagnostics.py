@@ -39,7 +39,7 @@ def run(path_to_recording: Path):
 
     row = {
     "os"           : os_name,              # Windows / Linux / Darwin
-    "version"      : "current",                      # tag for this run
+    "version"      : "1.6.4",                      # tag for this run
     "mean_distance": square_stats.mean_distance,
     "median_distance": square_stats.median_distance,
     "std_distance" : square_stats.std_distance,
