@@ -1,19 +1,14 @@
-"""
- 1.  collect every 1-row CSV in ./collected/**
- 2.  append them to freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv
- 3.  re-run generate_calibration_report.py
-"""
 from pathlib import Path
-import pandas as pd
-import subprocess, sys
+import pandas as pd, subprocess, sys
 
-repo_root   = Path(__file__).resolve().parents[1]          # repo root
-summary_csv = Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv")
-collected   = Path("collected")
+# repo root = three levels up from this script
+repo_root = Path(__file__).resolve().parents[3]
+print("🧭 repo_root =", repo_root)
 
-print(f"Collecting calibration rows from {collected} → {summary_csv}")
+summary_csv = repo_root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
+collected   = Path("collected")          # where download-artifact puts the CSVs
 
-# 1) read existing summary (or fail loudly)
+# 1) load existing summary
 if summary_csv.exists():
     full_df = pd.read_csv(summary_csv)
 else:
@@ -22,23 +17,22 @@ else:
         "Run build_calibration_dataset.py once to create it."
     )
 
-# 2) ingest each per-OS row
-rows = [pd.read_csv(csv_file) for csv_file in collected.glob("**/*.csv")]
+# 2) ingest rows
+rows = [pd.read_csv(f) for f in collected.glob("**/*.csv")]
 if not rows:
-    sys.exit("❌ No calibration rows found!")
+    sys.exit("❌ No calibration rows found in ./collected")
 
 new_df = pd.concat(rows, ignore_index=True)
 
-# 3) drop previous “current” rows, append fresh ones, save
+# 3) replace old 'current' rows and save
 full_df = full_df[full_df["version"] != "current"]
 full_df = pd.concat([full_df, new_df], ignore_index=True)
 
-summary_csv.parent.mkdir(parents=True, exist_ok=True)      # ensure dir exists
+summary_csv.parent.mkdir(parents=True, exist_ok=True)
 full_df.to_csv(summary_csv, index=False)
-print(f"✅ summary updated → {summary_csv}")
+print("✅ summary updated:", summary_csv)
 
-# 4) regenerate HTML report
-subprocess.run(
-    [sys.executable, "freemocap/diagnostics/calibration/generate_calibration_report.py"],
-    check=True
-)
+# 4) regenerate HTML
+report_script = repo_root / "freemocap/diagnostics/calibration/generate_calibration_report.py"
+subprocess.run([sys.executable, str(report_script)], check=True)
+print("🎉 HTML report regenerated")
