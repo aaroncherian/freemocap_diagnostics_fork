@@ -1,7 +1,8 @@
 from pathlib import Path
 from freemocap.diagnostics.calibration.calibration_utils import (
     get_neighbor_distances,
-    get_neighbor_stats
+    get_neighbor_stats,
+    CharucoNeighborStats
 )
 import numpy as np
 import json
@@ -28,7 +29,7 @@ def run(path_to_recording: Path):
         number_of_squares_height=number_of_squares_height,
     )
     
-    square_stats = get_neighbor_stats(
+    square_stats:CharucoNeighborStats = get_neighbor_stats(
         distances=distances_between_squares,
         charuco_square_size_mm=charuco_square_size_mm
     )   
@@ -52,12 +53,6 @@ def run(path_to_recording: Path):
         writer.writerow(row)
 
     print(f"✅ one-row CSV written → {artifact_csv}")
-
-    # path_to_save_square_stats = path_to_recording / "charuco_square_stats.json"
-    # with open(path_to_save_square_stats, "w", encoding="utf-8") as fh:
-    #     json.dump(asdict(square_stats), fh, indent=4)
-    # print(f"Square stats saved to {path_to_save_square_stats}")
-    
 
 
 if __name__ == "__main__":

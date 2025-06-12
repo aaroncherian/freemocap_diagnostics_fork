@@ -38,19 +38,8 @@ def load_summary_data():
     print(f"Loading data from: {summary_csv}")
     df = pd.read_csv(summary_csv)
     
-    # Debug: print raw data
-    print("\n=== RAW DATA ===")
-    print(df.to_string())
-    print(f"\nShape: {df.shape}")
-    print(f"Columns: {list(df.columns)}")
-    print(f"Unique OS values: {df['os'].unique()}")
-    print(f"Unique version values: {df['version'].unique()}")
-    
     # Standardize OS names - remove any whitespace and fix case
     df["os"] = df["os"].str.strip()
-    
-    # Debug: Check OS values after cleaning
-    print(f"\nAfter cleaning OS values: {df['os'].unique()}")
     
     # Add version_key for sorting
     df["version_key"] = df["version"].apply(safe_parse)
@@ -61,14 +50,6 @@ def load_summary_data():
     
     # Sort by OS and version
     df = df.sort_values(["os", "version_key"], ascending=[True, True])
-    
-    # Debug: print sorted data
-    print("\n=== SORTED DATA ===")
-    for os_name in OS_ORDER:
-        os_data = df[df["os"] == os_name]
-        print(f"\n{os_name}: {len(os_data)} rows")
-        if len(os_data) > 0:
-            print(os_data[["version", "mean_distance", "std_distance"]].to_string())
     
     return df
 
@@ -315,9 +296,6 @@ def generate_html_report(df, output_path="freemocap/diagnostics/calibration_diag
     </head>
     <body>
         <h1>Calibration Diagnostics Report</h1>
-        
-        <hr><h2>Debug Information</h2>
-        <pre>{{ debug_info }}</pre>
 
         <hr><h2>Latest Calibration Summary (per OS)</h2>
         <p>Expected square size: <strong>{{ expected }} mm</strong></p>

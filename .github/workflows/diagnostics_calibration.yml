@@ -62,21 +62,6 @@ jobs:
           name: calib_row_${{ runner.os }}
           path: calib_row.csv
 
-      - name: Generate diagnostic report
-        shell: bash
-        run: |
-          source .venv/bin/activate || source .venv/Scripts/activate
-          uv pip install jinja2
-          python freemocap/diagnostics/generate_calibration_report.py
-
-      # Upload individual per-OS diagnostic report
-      - name: Upload OS-specific diagnostic report
-        uses: actions/upload-artifact@v4
-        with:
-          name: diagnostic_report_${{ matrix.os }}
-          path: freemocap/diagnostics/calibration_diagnostics.html
-
-      # Upload individual per-OS test data
       - name: Upload OS-specific calibration
         uses: actions/upload-artifact@v4
         with:
@@ -84,7 +69,7 @@ jobs:
           path: |
             ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
 
-  merge-and-report:
+  generate-report:
     needs: run-diagnostics
     runs-on: ubuntu-latest
 
@@ -99,84 +84,26 @@ jobs:
           source .venv/bin/activate
           uv pip install pandas plotly==5.* jinja2 packaging
 
-      - name: Download calibration rows
+      - name: Download OS calibration data
         uses: actions/download-artifact@v4
         with:
           pattern: calib_row_*
           path: collected
 
-      - name: Merge rows + regenerate report
+      - name: Generate calibration diagnostic report
         shell: bash
         run: |
           source .venv/bin/activate
           python freemocap/diagnostics/calibration/merge_calibration_data.py
 
-      - name: Upload merged calibration report
+      - name: Upload calibration report
         uses: actions/upload-artifact@v4
         with:
-          name: merged_calibration_report
+          name: calibration_diagnostics_report
           path: freemocap/diagnostics/calibration_diagnostics.html
 
       - name: Upload summary csv
         uses: actions/upload-artifact@v4
         with:
-          name: summary_csv
+          name: calibration_diagnostics_csv
           path: freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv
-
-  # aggregate-artifacts:
-  #   runs-on: ubuntu-latest
-  #   needs: run-diagnostics
-
-  #   steps:
-  #     - name: Set timestamp
-  #       id: set-timestamp
-  #       run: echo "RUN_ID=$(date +'%Y%m%d_%H%M%S')" >> $GITHUB_ENV
-
-  #     - name: Download all diagnostic reports
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         pattern: diagnostic_report_*
-  #         path: merged/diagnostic_reports
-
-  #     - name: Rename diagnostic reports for clarity
-  #       run: |
-  #         cd merged/diagnostic_reports
-  #         for dir in *; do
-  #           if [ -d "$dir" ]; then
-  #             mv "$dir"/diagnostic_report.html "../${dir}_diagnostic_report.html"
-  #             rm -r "$dir"
-  #           fi
-  #         done
-  #         cd ../
-
-  #     - name: Download all test data
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         pattern: test_data_*
-  #         path: merged/test_data
-
-  #     - name: Structure test data into per-OS folders
-  #       run: |
-  #         mkdir -p artifacts/test_data_artifacts
-  #         for dir in merged/test_data/*; do
-  #           OS_NAME=$(basename "$dir")
-  #           mkdir -p artifacts/test_data_artifacts/$OS_NAME
-  #           cp -r "$dir"/* artifacts/test_data_artifacts/$OS_NAME/
-  #         done
-
-  #     - name: Move renamed diagnostic reports into final folder
-  #       run: |
-  #         mkdir -p artifacts/diagnostic_reports
-  #         mv merged/*_diagnostic_report.html artifacts/diagnostic_reports/
-
-  #     - name: Upload combined diagnostic reports
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: diagnostic_reports_${{ env.RUN_ID }}
-  #         path: artifacts/diagnostic_reports
-
-  #     - name: Upload combined test data
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: test_data_artifacts_${{ env.RUN_ID }}
-  #         path: artifacts/test_data_artifacts
