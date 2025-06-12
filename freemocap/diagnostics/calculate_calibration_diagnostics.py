@@ -13,7 +13,7 @@ def run(path_to_recording: Path):
     
     path_to_3d_data = path_to_recording/"output_data"/"charuco_3d_xyz.npy"
     charuco_3d_data = np.load(path_to_3d_data)
-    artifact_csv= Path("calib_row.csv")  
+    csv_save_path= Path("data_current_calibration.csv")  
 
     path_to_json = path_to_recording/"charuco_board_info.json"
     with open(path_to_json, "r", encoding="utf-8") as fh:
@@ -47,12 +47,12 @@ def run(path_to_recording: Path):
     "mean_error"   : square_stats.mean_error,
     }
 
-    with open(artifact_csv, "w", newline="") as fh:
+    with open(csv_save_path, "w", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=row.keys())
         writer.writeheader()
         writer.writerow(row)
 
-    print(f"✅ one-row CSV written → {artifact_csv}")
+    print(f"✅ one-row CSV written → {csv_save_path}")
 
 
 if __name__ == "__main__":

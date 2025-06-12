@@ -60,7 +60,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: calib_row_${{ runner.os }}
-          path: calib_row.csv
+          path: data_current_calibration.csv
 
       - name: Upload OS-specific calibration
         uses: actions/upload-artifact@v4
@@ -87,7 +87,7 @@ jobs:
       - name: Download OS calibration data
         uses: actions/download-artifact@v4
         with:
-          pattern: calib_row_*
+          pattern: data_current_calibration_*
           path: collected
 
       - name: Generate calibration diagnostic report
