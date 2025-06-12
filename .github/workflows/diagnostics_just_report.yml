@@ -85,7 +85,7 @@ jobs:
     #         ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
 
   merge-and-report:
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
       - name: Checkout repository
