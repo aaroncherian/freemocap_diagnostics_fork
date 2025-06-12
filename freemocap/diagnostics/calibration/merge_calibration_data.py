@@ -8,8 +8,7 @@ repo_root = Path(__file__).resolve().parents[3]
 print("🧭 repo_root =", repo_root)
 
 summary_csv = repo_root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
-# collected = Path("collected")  # where download-artifact puts the CSVs
-collected = repo_root / "freemocap/diagnostics/calibration/collected"
+collected = Path("collected")  # where download-artifact puts the CSVs
 # 1) load existing summary
 if summary_csv.exists():
     full_df = pd.read_csv(summary_csv)
