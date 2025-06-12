@@ -85,7 +85,7 @@ jobs:
     #         ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
 
   merge-and-report:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
@@ -97,7 +97,7 @@ jobs:
           pip install uv
           uv venv
           source .venv/bin/activate
-          uv pip install pandas==2.1.4 plotly==5.14.1 jinja2==3.1.6 packaging
+          uv pip install pandas==2.1.4 plotly==5.14.1 jinja2 packaging
 
       # - name: Download calibration rows
       #   uses: actions/download-artifact@v4
