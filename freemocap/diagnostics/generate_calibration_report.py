@@ -73,6 +73,11 @@ def load_summary_data():
     return df
 
 def generate_figures(df):
+    OS_COLORS = {
+    "Windows": "rgb(0, 114, 178)",    # blue
+    "macOS":   "rgb(213, 94, 0)",     # vermilion
+    "Linux":   "rgb(0, 158, 115)",    # bluish green
+}
     # Figure 1 – All OS mean distance over all versions
     fig1 = go.Figure()
     
@@ -94,7 +99,7 @@ def generate_figures(df):
                 mode="lines+markers", 
                 name=os_name,
                 line=dict(width=2),
-                marker=dict(size=8)
+                marker=dict(size=8, color=OS_COLORS.get(os_name, "gray"))
             )
     
     fig1.add_hline(y=EXPECTED, line_dash="dash", line_color="black", 
@@ -148,7 +153,7 @@ def generate_figures(df):
                     thickness=2
                 ),
                 mode="markers", 
-                marker=dict(size=10, color=f"rgb({col*70}, {100+col*30}, {200-col*50})"),
+                marker=dict(size=10,  color=OS_COLORS.get(os_name, "gray")),
                 showlegend=False, 
                 row=1, 
                 col=col
@@ -214,7 +219,7 @@ def generate_figures(df):
                 mode="lines+markers", 
                 name=os_name,
                 line=dict(width=2),
-                marker=dict(size=8)
+                marker=dict(size=8, color=OS_COLORS.get(os_name, "gray"))
             ))
     
     fig3.add_hline(y=0, line_dash="dot", line_color="gray", 
