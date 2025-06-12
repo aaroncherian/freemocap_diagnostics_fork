@@ -230,9 +230,11 @@ def generate_figures(df):
         xaxis_tickfont=dict(size=16),
         yaxis_tickfont=dict(size=18),
         showlegend=True,
-        legend=dict(x=0.02, y=0.98, xanchor="left", yanchor="top")
+        legend=dict(x=0.02, y=0.98, xanchor="left", yanchor="top"),
     )
-
+    fig3.update_yaxes(
+        range=[-.5, .5],
+    )
     return fig1, fig2, fig3
 
 def generate_summary_table(df):
