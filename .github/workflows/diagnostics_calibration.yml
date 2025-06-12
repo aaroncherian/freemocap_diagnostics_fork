@@ -1,4 +1,4 @@
-name: Run Calibration Diagnostics
+name: Run calibration diagnostics
 
 on:
   workflow_dispatch:
