@@ -63,9 +63,12 @@ jobs:
       - name: Upload OS-specific calibration
         uses: actions/upload-artifact@v4
         with:
-          name: test_data_${{ matrix.os }}
+          name: test_data_calibration_files${{ matrix.os }}
           path: |
             ${{ env.RECORDING_PATH }}/*camera_calibration*.toml
+            ${{ env.RECORDING_PATH }}/output_data/charuco_3d_xyz.npy
+            ${{ env.RECORDING_PATH }}/output_data/raw_data/charuco_2dData_numCams_numFrames_numTrackedPoints_pixelXY.npy
+
 
   generate-report:
     needs: run-diagnostics
