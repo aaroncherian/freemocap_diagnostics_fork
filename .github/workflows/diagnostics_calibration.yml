@@ -6,7 +6,9 @@ on:
     branches: [ main ]
     paths:
         - 'freemocap/**'
-
+    push:
+      branches: [main]
+      
 jobs:
   run-diagnostics:
     runs-on: ${{ matrix.os }}
