@@ -53,7 +53,7 @@ def setup_session():
     #     path_to_camera_calibration_toml=calibration_toml_path,
     #     recording_info_model=SessionInfo.recording_info_model,
     #     run_blender=False,
-    #     make_jupyter_notebook=False
+    #     make_jupyter_notebook=False,
     #     use_tqdm=False,
     # )
 
