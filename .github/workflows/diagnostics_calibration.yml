@@ -107,4 +107,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: calibration_diagnostics_csv
-          path: freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv
+          path: freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv

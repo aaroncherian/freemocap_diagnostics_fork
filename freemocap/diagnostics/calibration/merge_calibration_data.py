@@ -7,7 +7,7 @@ import sys
 repo_root = Path(__file__).resolve().parents[3]
 print("🧭 repo_root =", repo_root)
 
-summary_csv = repo_root / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"
+summary_csv = repo_root / "freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv"
 collected = Path("collected")  # where download-artifact puts the CSVs
 # 1) load existing summary
 if summary_csv.exists():
@@ -88,7 +88,7 @@ full_df.to_csv(summary_csv, index=False)
 print(f"✅ Summary updated: {summary_csv}")
 
 # 4) regenerate HTML
-report_script = repo_root / "freemocap/diagnostics/generate_calibration_report.py"
+report_script = repo_root / "freemocap/diagnostics/calibration/generate_calibration_report.py"
 if report_script.exists():
     print(f"Running report generation script: {report_script}")
     result = subprocess.run([sys.executable, str(report_script)], capture_output=True, text=True)

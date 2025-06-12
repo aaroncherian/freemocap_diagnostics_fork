@@ -18,9 +18,9 @@ def safe_parse(ver: str) -> Version:
 def load_summary_data():
     # Try to find the CSV in multiple locations
     possible_paths = [
-        Path("freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv"),
+        Path("freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv"),
         Path("calibration_diagnostics_summary.csv"),
-        Path.cwd() / "freemocap/diagnostics/calibration/calibration_diagnostics_summary.csv",
+        Path.cwd() / "freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv",
     ]
     
     summary_csv = None
