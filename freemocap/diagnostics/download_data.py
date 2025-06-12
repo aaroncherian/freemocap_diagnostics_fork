@@ -26,6 +26,7 @@ def get_dataset(key: str) -> Path:
 
     return Path(download_data(spec.url))
 
+
 def download_data(zip_file_url) -> str:
     try:
         logger.info(f"Downloading data from {zip_file_url}...")
