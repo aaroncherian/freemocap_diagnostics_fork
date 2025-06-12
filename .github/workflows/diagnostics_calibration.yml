@@ -1,8 +1,6 @@
-name: Run Diagnostics
+name: Run Calibration Diagnostics
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
 
 jobs:
@@ -59,7 +57,7 @@ jobs:
       
       - uses: actions/upload-artifact@v4
         with:
-          name: calib_row_${{ runner.os }}
+          name: data_current_calibration_${{ runner.os }}
           path: data_current_calibration.csv
 
       - name: Upload OS-specific calibration
