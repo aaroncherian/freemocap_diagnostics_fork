@@ -22,7 +22,7 @@ def get_dataset(key: str) -> Path:
     try:
         spec = DATASETS[key]
     except KeyError:
-        raise ValueError(f"Unknown dataset '{key}'. Options: {list(DATASETS)}")
+        raise ValueError(f"Unknown dataset '{key}'. Options: {list(DATAETS)}")
 
     return Path(download_data(spec.url))
 
