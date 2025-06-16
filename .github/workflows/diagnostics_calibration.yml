@@ -104,6 +104,7 @@ jobs:
           python freemocap/diagnostics/calibration/merge_calibration_data.py
 
       - name: Upload calibration report
+        id: upload_report
         uses: actions/upload-artifact@v4
         with:
           name: calibration_diagnostics_report
@@ -115,11 +116,9 @@ jobs:
           name: calibration_diagnostics_csv
           path: freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv
 
-      - name: Add summary with link
-        if: always()                
-        env:
-          REPORT: calibration_diagnostics.html
+      - name: Summarise results
+        if: always()
         run: |
           echo "### Calibration diagnostics :camera:" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Report artifact:** [$REPORT](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          echo "Report artifact: [calibration_diagnostics.html](${{ steps.upload_report.outputs.artifact-url }})" >> $GITHUB_STEP_SUMMARY
