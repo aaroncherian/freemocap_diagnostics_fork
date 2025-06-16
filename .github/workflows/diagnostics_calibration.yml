@@ -59,7 +59,7 @@ jobs:
         shell: bash
         run: |
           source .venv/bin/activate || source .venv/Scripts/activate
-          python freemocap/diagnostics/calculate_calibration_diagnostics.py
+          python freemocap/diagnostics/calibration/calculate_calibration_diagnostics.py
       
       - uses: actions/upload-artifact@v4
         with:
@@ -114,3 +114,12 @@ jobs:
         with:
           name: calibration_diagnostics_csv
           path: freemocap/diagnostics/diagnostic_data/calibration_diagnostics_summary.csv
+
+      - name: Add summary with link
+        if: always()                
+        env:
+          REPORT: calibration_diagnostics.html
+        run: |
+          echo "### Calibration diagnostics :camera:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Report artifact:** [$REPORT](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
